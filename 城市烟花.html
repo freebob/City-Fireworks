@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>城市烟花 - City Fireworks</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #0a0a1a 0%, #1a0a2a 40%, #0a1a2a 100%);
+            overflow: hidden;
+            cursor: crosshair;
+            font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            min-height: 100vh;
+        }
+
+        .city-silhouette {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .moon {
+            position: fixed;
+            top: 80px;
+            right: 120px;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at 30% 30%, #fffef0 0%, #fff8dc 40%, #f5deb3 100%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 60px #fff8dc,
+                0 0 100px #fffae6,
+                0 0 150px rgba(255, 250, 220, 0.5),
+                0 0 200px rgba(255, 248, 220, 0.3);
+            z-index: 2;
+        }
+
+        .moon::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            width: 20px;
+            height: 20px;
+            background: rgba(200, 180, 150, 0.3);
+            border-radius: 50%;
+        }
+
+        .moon::after {
+            content: '';
+            position: absolute;
+            top: 45px;
+            left: 55px;
+            width: 15px;
+            height: 15px;
+            background: rgba(200, 180, 150, 0.25);
+            border-radius: 50%;
+        }
+
+        .moon-glow {
+            position: fixed;
+            top: 50px;
+            right: 70px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(255, 250, 230, 0.15) 0%, transparent 70%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            filter: blur(8px);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .cloud::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 20%;
+            width: 60%;
+            height: 60%;
+            background: inherit;
+            border-radius: 50%;
+            filter: blur(6px);
+        }
+
+        .cloud::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            right: 20%;
+            width: 50%;
+            height: 50%;
+            background: inherit;
+            border-radius: 50%;
+            filter: blur(5px);
+        }
+
+        #clouds {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+        }
+
+        .building {
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(to top, #0a0a15 0%, #0a0a20 100%);
+        }
+
+        .window {
+            position: absolute;
+            width: 3px;
+            height: 4px;
+            background: #ffcc44;
+            box-shadow: 0 0 4px #ffcc44;
+            animation: windowFlicker 2s ease-in-out infinite;
+        }
+
+        .window.off {
+            background: #1a1a2a;
+            box-shadow: none;
+            animation: none;
+        }
+
+        @keyframes windowFlicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .lantern {
+            position: absolute;
+            width: 40px;
+            height: 50px;
+            background: radial-gradient(ellipse at center, #ff4444 0%, #cc0000 70%);
+            border-radius: 50% 50% 45% 45%;
+            box-shadow: 0 0 30px #ff6600, 0 0 60px #ff3300;
+            animation: lanternSwing 3s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        .lantern::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 15px;
+            background: #8b4513;
+        }
+
+        .lantern::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 10px;
+            background: #ffd700;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        @keyframes lanternSwing {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .firework {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .firework-particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .spark {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        #warning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-size: 18px;
+            text-align: center;
+            padding: 30px 50px;
+            border: 3px solid #ff4444;
+            background: rgba(20, 10, 30, 0.95);
+            z-index: 1000;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.5);
+        }
+
+        #warning h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff6600;
+            color: #ff6600;
+        }
+
+        #warning p {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .title-text {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-size: 24px;
+            text-shadow: 0 0 20px #ff6600, 0 0 40px #ff3300;
+            z-index: 50;
+            font-weight: bold;
+            letter-spacing: 5px;
+        }
+
+        .selection-controls {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .selection-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #ffd700;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffd700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .selection-btn:hover, .selection-btn.active {
+            background: #ffd700;
+            color: #000;
+            box-shadow: 0 0 15px #ffd700;
+        }
+
+        .selection-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ff4444;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 300;
+            animation: markerPulse 1s ease-in-out infinite;
+        }
+
+        .selection-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: #ff4444;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes markerPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.7; }
+        }
+
+        @media (max-width: 768px) {
+            .title-text {
+                font-size: 16px;
+                letter-spacing: 2px;
+            }
+            
+            .selection-controls {
+                top: 60px;
+                gap: 5px;
+            }
+            
+            .selection-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .firework-type-selector {
+                bottom: 10px;
+                padding: 8px 12px;
+                gap: 6px;
+            }
+            
+            .type-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+            
+            #warning {
+                padding: 20px 30px;
+            }
+            
+            #warning h1 {
+                font-size: 24px;
+            }
+            
+            #warning p {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .title-text {
+                font-size: 14px;
+                letter-spacing: 1px;
+                top: 10px;
+            }
+            
+            .selection-controls {
+                top: 45px;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .selection-btn {
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+            
+            .firework-type-selector {
+                bottom: 8px;
+                padding: 6px 10px;
+                gap: 4px;
+            }
+            
+            .type-btn {
+                width: 26px;
+                height: 26px;
+                font-size: 12px;
+            }
+            
+            #warning {
+                padding: 15px 20px;
+                width: 80%;
+            }
+            
+            #warning h1 {
+                font-size: 20px;
+            }
+            
+            #warning p {
+                font-size: 11px;
+            }
+        }
+
+        .firework-type-selector {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+
+        .type-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #ffd700;
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .type-btn:hover, .type-btn.active {
+            background: #ffd700;
+            color: #000;
+            box-shadow: 0 0 15px #ffd700;
+        }
+
+        .wish-input-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 10, 30, 0.95);
+            padding: 30px 40px;
+            border-radius: 20px;
+            border: 3px solid #ffd700;
+            z-index: 500;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+        }
+
+        .wish-input-container h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #ff6600;
+        }
+
+        .wish-input {
+            width: 280px;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ff6600;
+            border-radius: 25px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            outline: none;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .wish-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .wish-input:focus {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        .wish-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .wish-btn {
+            padding: 10px 25px;
+            border-radius: 20px;
+            border: 2px solid;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wish-btn.confirm {
+            background: #ff6600;
+            border-color: #ff6600;
+            color: #fff;
+        }
+
+        .wish-btn.confirm:hover {
+            background: #ff8800;
+            box-shadow: 0 0 15px #ff6600;
+        }
+
+        .wish-btn.cancel {
+            background: transparent;
+            border-color: #888;
+            color: #aaa;
+        }
+
+        .wish-btn.cancel:hover {
+            border-color: #fff;
+            color: #fff;
+        }
+
+        .wish-text {
+            position: absolute;
+            color: #ffd700;
+            font-size: 16px;
+            text-shadow: 0 0 10px #ff6600;
+            white-space: nowrap;
+            animation: wishFloat 8s ease-out forwards;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        @keyframes wishFloat {
+            0% { opacity: 0; transform: translateY(0); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-200px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="title-text">🎆 城市烟花 🎆</div>
+    <div class="moon"></div>
+    <div class="moon-glow"></div>
+    <div id="clouds"></div>
+    <div class="selection-controls hidden" id="selectionControls">
+        <button id="selectionModeBtn" class="selection-btn">📍 选点模式</button>
+        <button id="wishLanternBtn" class="selection-btn">🏮 孔明灯</button>
+        <button id="fireAllBtn" class="selection-btn" style="display:none;">🎆 全部燃放</button>
+        <button id="screenshotBtn" class="selection-btn">📸 截图</button>
+    </div>
+    
+    <div id="warning">
+        <h1>🏮 城市烟花 🏮</h1>
+        <p>点击屏幕燃放烟花</p>
+        <p style="margin-top: 10px; font-size: 12px; opacity: 0.6;">包含闪烁效果和声音</p>
+    </div>
+
+    <div class="city-silhouette" id="city"></div>
+
+    <div class="firework-type-selector hidden" id="typeSelector">
+        <button class="type-btn active" data-type="circle" title="圆形">⬤</button>
+        <button class="type-btn" data-type="star" title="星星">★</button>
+        <button class="type-btn" data-type="chrysanthemum" title="菊花">✿</button>
+        <button class="type-btn" data-type="willow" title="柳叶">♫</button>
+        <button class="type-btn" data-type="peony" title="牡丹">❀</button>
+        <button class="type-btn" data-type="ring" title="圆环">○</button>
+    </div>
+
+    <script>
+        const warning = document.getElementById('warning');
+        const typeSelector = document.getElementById('typeSelector');
+        let gameStarted = false;
+        let audioContext = null;
+        let currentType = 'circle';
+        let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        let particleMultiplier = isMobile ? 0.4 : 1;
+        let autoFireInterval = isMobile ? 1500 : 600;
+        let autoFireEnabled = true;
+        let selectedPoints = [];
+        let isSelectionMode = false;
+        let isWishLanternMode = false;
+        let selectionMarkers = [];
+        let wishInputShown = false;
+        let wishLanternX = 0;
+        let wishLanternY = 0;
+
+        const fireworkColors = [
+            '#ff0000', '#ff6600', '#ffaa00', '#ffff00', 
+            '#00ff00', '#00ffff', '#0066ff', '#ff00ff',
+            '#ff3366', '#33ff33', '#ff9933', '#cc00ff',
+            '#ffffff', '#ffd700', '#ff1493', '#00ced1'
+        ];
+
+        function initCity() {
+            const city = document.getElementById('city');
+            
+            const shenzhenBuildings = [
+                { name: '平安大厦', type: 'tower', height: 200 },
+                { name: '华润大厦', type: 'tower', height: 190 },
+                { name: '春笋', type: 'curved', height: 185 },
+                { name: '平安金融中心', type: 'tower', height: 200 },
+                { name: '大疆无人机', type: 'cuboid', height: 170 },
+                { name: '腾讯大厦', type: 'cuboid', height: 165 },
+                { name: '阿里中心', type: 'cuboid', height: 160 },
+                { name: '百度国际', type: 'cuboid', height: 155 },
+                { name: '普通商厦', type: 'cuboid', height: 145 },
+                { name: '住宅楼', type: 'residential', height: 135 },
+            ];
+
+            const getBuildingData = (index, total) => {
+                if (index === Math.floor(total * 0.2)) return shenzhenBuildings[0];
+                if (index === Math.floor(total * 0.4)) return shenzhenBuildings[1];
+                if (index === Math.floor(total * 0.6)) return shenzhenBuildings[2];
+                if (index === Math.floor(total * 0.8)) return shenzhenBuildings[3];
+                return shenzhenBuildings[Math.floor(Math.random() * 4) + 4];
+            };
+
+            const buildingCount = 25;
+            
+            for (let i = 0; i < buildingCount; i++) {
+                const buildingData = getBuildingData(i, buildingCount);
+                const building = document.createElement('div');
+                building.className = 'building';
+                
+                let width, height;
+                switch(buildingData.type) {
+                    case 'tower':
+                        width = 40 + Math.random() * 30;
+                        height = buildingData.height * (0.7 + Math.random() * 0.3);
+                        building.dataset.type = 'tower';
+                        break;
+                    case 'curved':
+                        width = 50 + Math.random() * 40;
+                        height = buildingData.height * (0.8 + Math.random() * 0.2);
+                        building.dataset.type = 'curved';
+                        break;
+                    case 'cuboid':
+                        width = 50 + Math.random() * 50;
+                        height = buildingData.height * (0.6 + Math.random() * 0.4);
+                        building.dataset.type = 'cuboid';
+                        break;
+                    default:
+                        width = 30 + Math.random() * 30;
+                        height = 50 + Math.random() * 100;
+                }
+                
+                const left = (i / buildingCount) * window.innerWidth;
+                
+                building.style.cssText = `
+                    width: ${width}px;
+                    height: ${height}px;
+                    left: ${left}px;
+                `;
+                city.appendChild(building);
+
+                const windowRows = Math.floor(height / 18);
+                const windowCols = Math.floor(width / 12);
+                
+                for (let r = 0; r < windowRows; r++) {
+                    for (let c = 0; c < windowCols; c++) {
+                        if (Math.random() > 0.25) {
+                            const win = document.createElement('div');
+                            const isLit = Math.random() > 0.35;
+                            win.className = isLit ? 'window' : 'window off';
+                            win.style.left = (c * 12 + 4) + 'px';
+                            win.style.top = (r * 18 + 8) + 'px';
+                            win.style.animationDelay = Math.random() * 3 + 's';
+                            
+                            if (isLit) {
+                                const colors = ['#ffcc44', '#ffdd66', '#ffee88', '#fffaf0', '#87ceeb'];
+                                win.style.background = colors[Math.floor(Math.random() * colors.length)];
+                                win.style.boxShadow = `0 0 ${3 + Math.random() * 4}px ${win.style.background}`;
+                            }
+                            
+                            building.appendChild(win);
+                        }
+                    }
+                }
+
+                if (buildingData.type === 'tower' && Math.random() > 0.5) {
+                    const antenna = document.createElement('div');
+                    antenna.style.cssText = `
+                        position: absolute;
+                        bottom: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 3px;
+                        height: ${30 + Math.random() * 50}px;
+                        background: linear-gradient(to top, #1a1a2a, #ff0000);
+                    `;
+                    building.appendChild(antenna);
+                    
+                    const light = document.createElement('div');
+                    light.style.cssText = `
+                        position: absolute;
+                        bottom: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 8px;
+                        height: 8px;
+                        background: #ff0000;
+                        border-radius: 50%;
+                        animation: blink 1s ease-in-out infinite;
+                    `;
+                    building.appendChild(light);
+                }
+            }
+
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playFireworkSound(type = 'circle', isAuto = false) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const duration = isAuto ? 0.5 : 0.25;
+            const volume = isAuto ? 0.4 : 0.3;
+            const freqStart = isAuto ? 600 : 800;
+            
+            const noise = audioContext.createBufferSource();
+            const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            for (let i = 0; i < noiseBuffer.length; i++) {
+                const t = i / audioContext.sampleRate;
+                output[i] = (Math.random() * 2 - 1) * Math.exp(-t * 10);
+            }
+            
+            noise.buffer = noiseBuffer;
+            
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2500, audioContext.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + duration);
+            
+            const gain = audioContext.createGain();
+            gain.gain.setValueAtTime(volume, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioContext.destination);
+            noise.start();
+
+            const subOsc = audioContext.createOscillator();
+            const subGain = audioContext.createGain();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(freqStart, audioContext.currentTime);
+            subOsc.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + duration * 0.6);
+            subGain.gain.setValueAtTime(volume * 0.8, audioContext.currentTime);
+            subGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration * 0.6);
+            subOsc.connect(subGain);
+            subGain.connect(audioContext.destination);
+            subOsc.start();
+            subOsc.stop(audioContext.currentTime + duration * 0.6);
+        }
+
+        function createLantern() {
+            const lantern = document.createElement('div');
+            lantern.className = 'lantern';
+            lantern.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+            lantern.style.top = (Math.random() * 200 - 100) + 'px';
+            lantern.style.animationDelay = Math.random() * 2 + 's';
+            lantern.style.opacity = 0.7 + Math.random() * 0.3;
+            document.body.appendChild(lantern);
+
+            setTimeout(() => {
+                lantern.remove();
+            }, 10000);
+        }
+
+        function initClouds() {
+            const cloudCount = 6;
+            
+            for (let i = 0; i < cloudCount; i++) {
+                setTimeout(() => createCloud(false), i * 2000);
+            }
+            
+            setInterval(() => {
+                if (document.querySelectorAll('.cloud').length < cloudCount) {
+                    createCloud(true);
+                }
+            }, 5000);
+        }
+
+        function createCloud(fromRight) {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            
+            const width = 150 + Math.random() * 200;
+            const height = 40 + Math.random() * 30;
+            const top = 20 + Math.random() * 120;
+            const startPos = fromRight ? window.innerWidth + 100 : -width - 100;
+            const endPos = fromRight ? -width - 200 : window.innerWidth + 200;
+            const duration = 50 + Math.random() * 30;
+            
+            cloud.style.cssText = `
+                width: ${width}px;
+                height: ${height}px;
+                top: ${top}px;
+                left: ${startPos}px;
+                opacity: ${0.08 + Math.random() * 0.12};
+                animation: cloudMove${Date.now()} ${duration}s linear forwards;
+            `;
+            
+            const keyframes = `
+                @keyframes cloudMove${Date.now()} {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(${endPos - startPos}px); }
+                }
+            `;
+            const style = document.createElement('style');
+            style.textContent = keyframes;
+            document.head.appendChild(style);
+            
+            document.getElementById('clouds').appendChild(cloud);
+            
+            setTimeout(() => {
+                cloud.remove();
+                style.remove();
+            }, duration * 1000);
+        }
+
+        function createWishLantern(x, y, wishText) {
+            const lantern = document.createElement('div');
+            lantern.className = 'wish-lantern';
+            
+            const colors = ['#ff4444', '#ff6600', '#ffaa00', '#ff3333'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            lantern.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                width: 35px;
+                height: 45px;
+                background: radial-gradient(ellipse at center, ${color} 0%, #aa0000 70%);
+                border-radius: 50% 50% 45% 45%;
+                box-shadow: 0 0 25px #ff6600, 0 0 50px rgba(255, 102, 0, 0.5);
+                z-index: 10;
+                transform: translate(-50%, -50%);
+            `;
+            
+            const frame = document.createElement('div');
+            frame.style.cssText = `
+                position: absolute;
+                top: -12px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 3px;
+                height: 12px;
+                background: #8b4513;
+            `;
+            lantern.appendChild(frame);
+            
+            const bottom = document.createElement('div');
+            bottom.style.cssText = `
+                position: absolute;
+                bottom: -6px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 18px;
+                height: 8px;
+                background: #ffd700;
+                border-radius: 0 0 4px 4px;
+                box-shadow: 0 0 8px #ffd700;
+            `;
+            lantern.appendChild(bottom);
+            
+            document.body.appendChild(lantern);
+            
+            let px = x;
+            let py = y;
+            let swingAngle = 0;
+            let swingDirection = Math.random() > 0.5 ? 1 : -1;
+            let wishEl = null;
+            
+            const animate = () => {
+                py -= 1.2;
+                swingAngle += 0.08 * swingDirection;
+                if (Math.abs(swingAngle) > 0.3) {
+                    swingDirection *= -1;
+                }
+                
+                lantern.style.left = px + Math.sin(swingAngle) * 15 + 'px';
+                lantern.style.top = py + 'px';
+                lantern.style.transform = `translate(-50%, -50%) rotate(${swingAngle * 20}deg)`;
+                
+                if (wishEl) {
+                    wishEl.style.left = lantern.style.left;
+                    wishEl.style.top = (py - 60) + 'px';
+                }
+                
+                if (py > -100) {
+                    requestAnimationFrame(animate);
+                } else {
+                    lantern.remove();
+                    if (wishEl) wishEl.remove();
+                }
+            };
+            
+            setTimeout(() => requestAnimationFrame(animate), Math.random() * 500);
+            
+            if (wishText) {
+                wishEl = document.createElement('div');
+                wishEl.style.cssText = `
+                    position: absolute;
+                    left: ${x}px;
+                    top: ${y - 60}px;
+                    color: #ffd700;
+                    font-size: 16px;
+                    text-shadow: 0 0 10px #ff6600;
+                    white-space: nowrap;
+                    z-index: 50;
+                    pointer-events: none;
+                `;
+                wishEl.textContent = '💫 ' + wishText;
+                document.body.appendChild(wishEl);
+            }
+        }
+
+        function showWishInput(x, y) {
+            wishLanternX = x;
+            wishLanternY = y;
+            wishInputShown = true;
+            
+            const container = document.createElement('div');
+            container.className = 'wish-input-container';
+            container.id = 'wishInputContainer';
+            container.innerHTML = `
+                <h2>🏮 写下你的愿望 🏮</h2>
+                <input type="text" class="wish-input" id="wishTextInput" 
+                       placeholder="点击输入愿望..." maxlength="20">
+                <div class="wish-buttons">
+                    <button class="wish-btn cancel" id="cancelWish">取消</button>
+                    <button class="wish-btn confirm" id="confirmWish">放飞</button>
+                </div>
+            `;
+            document.body.appendChild(container);
+            
+            const inputEl = document.getElementById('wishTextInput');
+            inputEl.focus();
+            
+            document.getElementById('cancelWish').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeWishInput();
+            });
+            document.getElementById('confirmWish').addEventListener('click', (e) => {
+                e.stopPropagation();
+                releaseWishLantern();
+            });
+            inputEl.addEventListener('keypress', (e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') releaseWishLantern();
+            });
+            
+            container.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        function closeWishInput() {
+            const container = document.getElementById('wishInputContainer');
+            if (container) {
+                container.remove();
+            }
+            wishInputShown = false;
+        }
+
+        function releaseWishLantern() {
+            const input = document.getElementById('wishTextInput');
+            const wishText = input.value.trim();
+            closeWishInput();
+            createWishLantern(wishLanternX, wishLanternY, wishText);
+        }
+
+        function createCircleFirework(x, y, color) {
+            const particleCount = Math.floor(100 * particleMultiplier);
+            const explosionRadius = 100;
+
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                transform: translate(-50%, -50%);
+                width: 30px;
+                height: 30px;
+                background: ${color};
+                border-radius: 50%;
+                box-shadow: 0 0 60px ${color}, 0 0 100px ${color};
+                z-index: 200;
+            `;
+            document.body.appendChild(flash);
+
+            let opacity = 1;
+            const fadeFlash = setInterval(() => {
+                opacity -= 0.12;
+                flash.style.opacity = opacity;
+                if (opacity <= 0) {
+                    clearInterval(fadeFlash);
+                    flash.remove();
+                }
+            }, 15);
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const velocity = explosionRadius * (0.6 + Math.random() * 0.4);
+                createParticle(x, y, angle, velocity, color, 1.2, 0.015);
+            }
+        }
+
+        function createStarFirework(x, y, color) {
+            const particleCount = Math.floor(50 * particleMultiplier);
+            const explosionRadius = 120;
+
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                transform: translate(-50%, -50%) scale(1);
+                width: 20px;
+                height: 20px;
+                background: ${color};
+                clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+                box-shadow: 0 0 40px ${color};
+                z-index: 200;
+            `;
+            document.body.appendChild(flash);
+
+            let scale = 1;
+            const expandFlash = setInterval(() => {
+                scale += 0.15;
+                flash.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                flash.style.opacity = 2 - scale;
+                if (scale >= 2) {
+                    clearInterval(expandFlash);
+                    flash.remove();
+                }
+            }, 15);
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const velocity = explosionRadius * (0.5 + Math.random() * 0.5);
+                const isLong = i % 5 === 0;
+                createParticle(x, y, angle, isLong ? velocity * 1.5 : velocity * 0.7, color, isLong ? 1.5 : 0.8, 0.012);
+            }
+        }
+
+        function createChrysanthemumFirework(x, y, color) {
+            const particleCount = Math.floor(80 * particleMultiplier);
+            const explosionRadius = 90;
+
+            for (let ring = 0; ring < 3; ring++) {
+                setTimeout(() => {
+                    for (let i = 0; i < particleCount / 3; i++) {
+                        const angle = (Math.PI * 2 * i) / (particleCount / 3) + ring * 0.3;
+                        const velocity = (explosionRadius - ring * 20) * (0.7 + Math.random() * 0.3);
+                        createParticle(x, y, angle, velocity, color, 1.0, 0.018, 3 + Math.random() * 2);
+                    }
+                }, ring * 50);
+            }
+
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                transform: translate(-50%, -50%);
+                width: 25px;
+                height: 25px;
+                background: ${color};
+                border-radius: 50%;
+                box-shadow: 0 0 50px ${color};
+                z-index: 200;
+            `;
+            document.body.appendChild(flash);
+            setTimeout(() => { flash.remove(); }, 100);
+        }
+
+        function createWillowFirework(x, y, color) {
+            const particleCount = Math.floor(60 * particleMultiplier);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.8;
+                const velocity = 30 + Math.random() * 50;
+                const gravity = 0.08;
+                const drag = 0.985;
+                const life = 2.5;
+                createParticle(x, y, angle, velocity, color, life, 0.008, 2, gravity, drag);
+            }
+
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const trailX = x + (Math.random() - 0.5) * 100;
+                    const trailY = y - Math.random() * 50;
+                    createParticle(trailX, trailY, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, 20 + Math.random() * 30, '#ffffff', 1.5, 0.01, 2, 0.1, 0.98);
+                }, i * 30);
+            }
+        }
+
+        function createPeonyFirework(x, y, color) {
+            const particleCount = Math.floor(120 * particleMultiplier);
+            const explosionRadius = 80;
+
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                transform: translate(-50%, -50%);
+                width: 35px;
+                height: 35px;
+                background: radial-gradient(circle, ${color} 0%, transparent 70%);
+                border-radius: 50%;
+                box-shadow: 0 0 80px ${color};
+                z-index: 200;
+            `;
+            document.body.appendChild(flash);
+
+            let opacity = 1;
+            const fadeFlash = setInterval(() => {
+                opacity -= 0.1;
+                flash.style.opacity = opacity;
+                if (opacity <= 0) {
+                    clearInterval(fadeFlash);
+                    flash.remove();
+                }
+            }, 20);
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = explosionRadius * (0.3 + Math.random() * 0.7);
+                const size = 4 + Math.random() * 5;
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    left: ${x}px;
+                    top: ${y}px;
+                    width: ${size}px;
+                    height: ${size}px;
+                    background: ${Math.random() > 0.2 ? color : fireworkColors[Math.floor(Math.random() * fireworkColors.length)]};
+                    border-radius: 50%;
+                    box-shadow: 0 0 ${size * 3}px ${color};
+                    z-index: 150;
+                `;
+                document.body.appendChild(particle);
+
+                let px = x, py = y;
+                let vx = Math.cos(angle) * velocity * 0.08;
+                let vy = Math.sin(angle) * velocity * 0.08;
+                let gravity = 0.12;
+                let life = 1;
+
+                const animate = () => {
+                    vx *= 0.97;
+                    vy *= 0.97;
+                    vy += gravity;
+                    px += vx;
+                    py += vy;
+                    life -= 0.012;
+
+                    particle.style.left = px + 'px';
+                    particle.style.top = py + 'px';
+                    particle.style.opacity = life;
+
+                    if (life > 0) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        particle.remove();
+                    }
+                };
+                setTimeout(() => requestAnimationFrame(animate), Math.random() * 30);
+            }
+        }
+
+        function createRingFirework(x, y, color) {
+            const ringCount = 3;
+            
+            for (let ring = 0; ring < ringCount; ring++) {
+                setTimeout(() => {
+                    const radius = 40 + ring * 35;
+                    const particleCount = Math.floor((40 + ring * 10) * particleMultiplier);
+                    
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = (Math.PI * 2 * i) / particleCount + ring * 0.2;
+                        const particle = document.createElement('div');
+                        const size = 3 + Math.random() * 3;
+                        particle.style.cssText = `
+                            position: absolute;
+                            left: ${x}px;
+                            top: ${y}px;
+                            width: ${size}px;
+                            height: ${size}px;
+                            background: ${color};
+                            border-radius: 50%;
+                            box-shadow: 0 0 ${size * 4}px ${color};
+                            z-index: 150;
+                        `;
+                        document.body.appendChild(particle);
+
+                        let px = x, py = y;
+                        let vx = Math.cos(angle) * radius * 0.15;
+                        let vy = Math.sin(angle) * radius * 0.15;
+                        let life = 1;
+                        const fadeRate = 0.015;
+
+                        const animate = () => {
+                            px += vx;
+                            py += vy;
+                            vx *= 0.96;
+                            vy *= 0.96;
+                            life -= fadeRate;
+
+                            particle.style.left = px + 'px';
+                            particle.style.top = py + 'px';
+                            particle.style.opacity = life;
+                            particle.style.transform = `scale(${life})`;
+
+                            if (life > 0) {
+                                requestAnimationFrame(animate);
+                            } else {
+                                particle.remove();
+                            }
+                        };
+                        requestAnimationFrame(animate);
+                    }
+                }, ring * 80);
+            }
+        }
+
+        function createParticle(x, y, angle, velocity, color, life = 1, fadeRate = 0.015, size = null, gravity = 0.15, drag = 0.98) {
+            const particle = document.createElement('div');
+            particle.className = 'firework-particle';
+            const particleSize = size || (3 + Math.random() * 4);
+            
+            particle.style.cssText = `
+                position: absolute;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${particleSize}px;
+                height: ${particleSize}px;
+                background: ${Math.random() > 0.3 ? color : fireworkColors[Math.floor(Math.random() * fireworkColors.length)]};
+                border-radius: 50%;
+                box-shadow: 0 0 ${particleSize * 2}px ${color};
+                z-index: 150;
+            `;
+            document.body.appendChild(particle);
+
+            let px = x, py = y;
+            let vx = Math.cos(angle) * velocity * 0.1;
+            let vy = Math.sin(angle) * velocity * 0.1;
+            let currentLife = life;
+
+            const animateParticle = () => {
+                vx *= drag;
+                vy *= drag;
+                vy += gravity;
+                px += vx;
+                py += vy;
+                currentLife -= fadeRate;
+
+                particle.style.left = px + 'px';
+                particle.style.top = py + 'px';
+                particle.style.opacity = currentLife;
+                particle.style.transform = `scale(${currentLife})`;
+
+                if (currentLife > 0) {
+                    requestAnimationFrame(animateParticle);
+                } else {
+                    particle.remove();
+                }
+            };
+
+            setTimeout(() => requestAnimationFrame(animateParticle), Math.random() * 20);
+        }
+
+        function createFirework(x, y, type = null, isAuto = true) {
+            const fireworkType = type || currentType;
+            const color = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+
+            switch (fireworkType) {
+                case 'circle':
+                    createCircleFirework(x, y, color);
+                    break;
+                case 'star':
+                    createStarFirework(x, y, color);
+                    break;
+                case 'chrysanthemum':
+                    createChrysanthemumFirework(x, y, color);
+                    break;
+                case 'willow':
+                    createWillowFirework(x, y, color);
+                    break;
+                case 'peony':
+                    createPeonyFirework(x, y, color);
+                    break;
+                case 'ring':
+                    createRingFirework(x, y, color);
+                    break;
+                default:
+                    createCircleFirework(x, y, color);
+            }
+
+            playFireworkSound(fireworkType, isAuto);
+        }
+
+        function createTrailFirework(x, y) {
+            const color = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+            const particleCount = Math.floor(20 * particleMultiplier);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const velocity = 20 + Math.random() * 20;
+                const particle = document.createElement('div');
+                const size = 2 + Math.random() * 2;
+                particle.style.cssText = `
+                    position: absolute;
+                    left: ${x}px;
+                    top: ${y}px;
+                    width: ${size}px;
+                    height: ${size}px;
+                    background: ${color};
+                    border-radius: 50%;
+                    box-shadow: 0 0 ${size * 3}px ${color};
+                    z-index: 150;
+                `;
+                document.body.appendChild(particle);
+
+                let px = x, py = y;
+                let vx = Math.cos(angle) * velocity * 0.05;
+                let vy = Math.sin(angle) * velocity * 0.05;
+                let life = 1;
+
+                const animateParticle = () => {
+                    px += vx;
+                    py += vy;
+                    life -= 0.04;
+
+                    particle.style.left = px + 'px';
+                    particle.style.top = py + 'px';
+                    particle.style.opacity = life;
+
+                    if (life > 0) {
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        particle.remove();
+                    }
+                };
+                requestAnimationFrame(animateParticle);
+            }
+        }
+
+        function fireAtPosition(x, y) {
+            if (!gameStarted) return;
+            
+            if (isSelectionMode) {
+                selectedPoints.push({ x, y });
+                
+                const marker = document.createElement('div');
+                marker.className = 'selection-marker';
+                marker.style.left = x + 'px';
+                marker.style.top = y + 'px';
+                document.body.appendChild(marker);
+                selectionMarkers.push(marker);
+                
+                document.getElementById('fireAllBtn').style.display = 'inline-block';
+                return;
+            }
+            
+            if (isWishLanternMode) {
+                showWishInput(x, y);
+                return;
+            }
+            
+            createFirework(x, y, null, false);
+        }
+
+        function toggleWishLanternMode() {
+            isWishLanternMode = !isWishLanternMode;
+            const btn = document.getElementById('wishLanternBtn');
+            btn.classList.toggle('active', isWishLanternMode);
+            btn.textContent = isWishLanternMode ? '✅ 放灯中...' : '🏮 孔明灯';
+            
+            if (isWishLanternMode && isSelectionMode) {
+                toggleSelectionMode();
+            }
+        }
+
+        function fireAllSelected() {
+            selectedPoints.forEach((point, index) => {
+                setTimeout(() => {
+                    createFirework(point.x, point.y, null, false);
+                }, index * 100);
+            });
+            
+            selectionMarkers.forEach(marker => marker.remove());
+            selectedPoints = [];
+            selectionMarkers = [];
+            document.getElementById('fireAllBtn').style.display = 'none';
+        }
+
+        function toggleSelectionMode() {
+            isSelectionMode = !isSelectionMode;
+            const btn = document.getElementById('selectionModeBtn');
+            btn.classList.toggle('active', isSelectionMode);
+            btn.textContent = isSelectionMode ? '✅ 选点中...' : '📍 选点模式';
+            
+            if (!isSelectionMode) {
+                selectionMarkers.forEach(marker => marker.remove());
+                selectedPoints = [];
+                selectionMarkers = [];
+                document.getElementById('fireAllBtn').style.display = 'none';
+            }
+        }
+
+        function startGame() {
+            warning.classList.add('hidden');
+            typeSelector.classList.remove('hidden');
+            gameStarted = true;
+            initAudio();
+            
+            document.getElementById('selectionControls').classList.remove('hidden');
+            initCity();
+            initClouds();
+            window.addEventListener('resize', () => {
+                document.getElementById('city').innerHTML = '';
+                initCity();
+            });
+            
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    createLantern();
+                }, i * 500);
+            }
+
+            setInterval(createLantern, 2500);
+
+            const types = ['circle', 'star', 'chrysanthemum', 'peony', 'ring'];
+            setInterval(() => {
+                if (gameStarted) {
+                    const x = Math.random() * window.innerWidth;
+                    const maxY = window.innerHeight * (isMobile ? 0.25 : 0.35);
+                    const y = Math.random() * maxY;
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    createFirework(x, y, type, true);
+                }
+            }, autoFireInterval);
+        }
+
+        warning.addEventListener('click', startGame);
+
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentType = btn.dataset.type;
+            });
+        });
+
+        document.getElementById('selectionModeBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSelectionMode();
+        });
+        document.getElementById('fireAllBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            fireAllSelected();
+        });
+        document.getElementById('wishLanternBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleWishLanternMode();
+        });
+        
+        document.getElementById('screenshotBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            takeScreenshot();
+        });
+        
+        function takeScreenshot() {
+            const btn = document.getElementById('screenshotBtn');
+            btn.textContent = '📷 处理中...';
+            btn.disabled = true;
+            
+            html2canvas(document.body, {
+                backgroundColor: null,
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '元宵烟花-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                btn.textContent = '✅ 已保存!';
+                setTimeout(() => {
+                    btn.textContent = '📸 截图';
+                    btn.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                btn.textContent = '❌ 失败';
+                setTimeout(() => {
+                    btn.textContent = '📸 截图';
+                    btn.disabled = false;
+                }, 2000);
+            });
+        }
+        
+        document.addEventListener('click', (e) => {
+            fireAtPosition(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('touchstart', (e) => {
+            if (!gameStarted) {
+                startGame();
+            }
+            const touch = e.touches[0];
+            fireAtPosition(touch.clientX, touch.clientY);
+        });
+    </script>
+</body>
+</html>
